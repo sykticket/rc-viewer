@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3D Viewer</title>
+<!--
+  Ein Viewer für alle Modelle. Steuerung über URL-Parameter:
+
+  index.html?m=scan2.glb            Modell aus dem Ordner /models
+  &bg=transparent                    Hintergrund: transparent (Standard) oder Farbe ohne #, z.B. bg=ffffff
+  &rotate=1                          Auto-Rotation an (1, Standard) / aus (0)
+  &speed=20                          Rotationsgeschwindigkeit in Grad pro Sekunde
+  &zoom=1                            Zoomen erlauben (1, Standard) / aus (0)
+  &exposure=1                        Helligkeit (z.B. 0.8 oder 1.4)
+  &cam=0deg 75deg 105%               Startansicht: horizontal, vertikal, Abstand
+-->
+<!-- Alles lokal, keine fremden Server: Viewer (model-viewer 3.5.0) + Decoder für komprimierte Modelle -->
+<script type="module">
+  import './lib/model-viewer.min.js';
+  const MV = customElements.get('model-viewer');
+  MV.meshoptDecoderLocation = new URL('lib/meshopt_decoder.js', location.href).href;
+</script>
+<style>
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: transparent;
+    overflow: hidden;
+  }
+  model-viewer {
+    width: 100%;
+    height: 100%;
+    background-color: transparent;
+    --progress-bar-height: 0px;
+    outline: none;
+  }
+  #loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font: 12px/1 system-ui, sans-serif;
+    letter-spacing: .08em;
+    color: #888;
+    pointer-events: none;
+    transition: opacity .4s;
+  }
+  #loading.done { opacity: 0; }
+</style>
+</head>
+<body>
+<model-viewer id="mv"
+  camera-controls
+  touch-action="pan-y"
+  interaction-prompt="none"
+  shadow-intensity="0"
+  environment-image="neutral"
+  loading="eager">
+</model-viewer>
+<div id="loading">lädt …</div>
+
+<script>
+  const p = new URLSearchParams(location.search);
+  const mv = document.getElementById('mv');
+
+  mv.src = 'models/' + (p.get('m') || 'scan2.glb');
+
+  const bg = p.get('bg');
+  if (bg && bg !== 'transparent') {
+    const c = /^[0-9a-f]{3,8}$/i.test(bg) ? '#' + bg : bg;
+    document.body.style.background = c;
+  }
+
+  if (p.get('rotate') !== '0') {
+    mv.setAttribute('auto-rotate', '');
+    mv.setAttribute('auto-rotate-delay', '0');
+    mv.setAttribute('rotation-per-second', (p.get('speed') || '20') + 'deg');
+  }
+  if (p.get('zoom') === '0') mv.setAttribute('disable-zoom', '');
+  if (p.get('exposure')) mv.setAttribute('exposure', p.get('exposure'));
+  if (p.get('cam')) mv.setAttribute('camera-orbit', p.get('cam'));
+
+  mv.addEventListener('load', () => document.getElementById('loading').classList.add('done'));
+  mv.addEventListener('error', () => {
+    document.getElementById('loading').textContent = 'Modell nicht gefunden: ' + mv.src;
+  });
+</script>
+</body>
+</html>
